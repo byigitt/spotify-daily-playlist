@@ -1,0 +1,21 @@
+{
+  "name": "spotify-daily-playlist",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "start": "node ."
+  },
+  "type": "module",
+  "license": "MIT",
+  "author": {
+    "name": "byigitt",
+    "email": "bbayburtlu@hotmail.com"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "readline": "^1.3.0",
+    "scrobbles": "^0.3.0",
+    "spotify-web-api-node": "^5.0.2"
+  }
+}
