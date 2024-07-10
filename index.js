@@ -4,9 +4,11 @@ import SpotifyWebApi from "spotify-web-api-node";
 import express from "express";
 import superagent from "superagent";
 import readline from "readline";
+import fs from "fs";
 
 const PORT = process.env.PORT || 8888;
 const app = express();
+
 const spotifyApi = new SpotifyWebApi({
   clientId: process.env.SPOTIFY_CLIENT_ID,
   clientSecret: process.env.SPOTIFY_CLIENT_SECRET,
@@ -55,7 +57,7 @@ function getMostListenedSongs(songs) {
   return sortedSongs;
 }
 
-function getNewAccessToken() {
+async function getNewAccessToken() {
   spotifyApi.refreshAccessToken().then(
     function (data) {
       console.log("[+] refreshed access token");
@@ -107,9 +109,23 @@ async function getCodes(code) {
     console.log("[+] set access token and refresh token");
     spotifyApi.setAccessToken(access_token);
     spotifyApi.setRefreshToken(refresh_token);
+
+    fs.writeFileSync("token.json", JSON.stringify(data.body));
   } catch (error) {
     console.error(error);
   }
+}
+
+function createUrl() {
+  let url = spotifyApi.createAuthorizeURL(
+    ["playlist-modify-public", "playlist-modify-private", "playlist-read-private"],
+    "state",
+    false,
+    "code"
+  );
+  console.log("[+] open this URL in your browser and authorize the app");
+  console.log(url);
+  console.log("[?] enter the code from the URL");
 }
 
 async function question(question) {
@@ -195,18 +211,35 @@ app.get("/daily", async (req, res) => {
 
 app.listen(PORT, async () => {
   console.log("[+] server is running on http://localhost:" + PORT);
-  let url = spotifyApi.createAuthorizeURL(
-    ["playlist-modify-public", "playlist-modify-private", "playlist-read-private"],
-    "state",
-    false,
-    "code"
-  );
-  console.log("[+] open this URL in your browser and authorize the app");
-  console.log(url);
-  console.log("[?] enter the code from the URL");
-  const code = await question("[?] code: ");
-  console.log("[+] got code");
-  await getCodes(code);
+
+  let data = JSON.parse(fs.readFileSync("token.json"));
+
+  if (data["access_token"] && data["refresh_token"]) {
+    spotifyApi.setAccessToken(data["access_token"]);
+    spotifyApi.setRefreshToken(data["refresh_token"]);
+    spotifyApi.refreshAccessToken().then(
+      function (data) {
+        console.log("[+] refreshed access token");
+        spotifyApi.setAccessToken(data.body["access_token"]);
+        if (data.body["refresh_token"]) {
+          spotifyApi.setRefreshToken(data.body["refresh_token"]);
+          fs.writeFileSync("token.json", JSON.stringify(data.body));
+        }
+      },
+      async function (err) {
+        console.log("[!] could not refresh access token");
+        createUrl();
+        let code = await question("[?] code: ");
+        console.log("[+] got code");
+        await getCodes(code);
+      }
+    );
+  } else {
+    createUrl();
+    let code = await question("[?] code: ");
+    console.log("[+] got code");
+    await getCodes(code);
+  }
 
   setInterval(() => {
     try {
