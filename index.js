@@ -4,6 +4,7 @@ import SpotifyWebApi from "spotify-web-api-node";
 import express from "express";
 import superagent from "superagent";
 import readline from "readline";
+import cron from "node-cron";
 import fs from "fs";
 
 const PORT = process.env.PORT || 8888;
@@ -241,11 +242,11 @@ app.listen(PORT, async () => {
     await getCodes(code);
   }
 
-  setInterval(() => {
+  cron.schedule("0 0 * * *", async () => {
     try {
       dailyRequest();
     } catch (e) {
       console.error(e);
     }
-  }, 1000 * 60 * 60 * 24);
+  });
 });
